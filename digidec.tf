@@ -10,7 +10,7 @@ resource "aws_subnet" "digidec_private" {
   availability_zone       = "eu-west-3a"
 
   tags = {
-    Name = "digidec_public"
+    Name = "digidec_private"
   }
 }
 
@@ -26,7 +26,7 @@ resource "aws_subnet" "digidec_public" {
   availability_zone       = "eu-west-3a"
 
   tags = {
-    Name = "digidec_nacl"
+    Name = "digidec_public"
   }
 }
 
@@ -70,6 +70,6 @@ resource "aws_network_acl" "digidec" {
   }
 
   tags = {
-    Name = "digidec_public"
+    Name = "digidec_nacl"
   }
 }
