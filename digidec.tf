@@ -5,7 +5,7 @@
 # private subnet for digidec
 resource "aws_subnet" "digidec_private" {
   vpc_id                  = module.vpc.vpc_id
-  cidr_block              = local.digidec_public_subnet
+  cidr_block              = local.digidec_private_subnet
   map_public_ip_on_launch = true
   availability_zone       = "eu-west-3a"
 
@@ -21,7 +21,7 @@ resource "aws_subnet" "digidec_private" {
 # public subnet for digidec
 resource "aws_subnet" "digidec_public" {
   vpc_id                  = module.vpc.vpc_id
-  cidr_block              = local.digidec_private_subnet
+  cidr_block              = local.digidec_public_subnet
   map_public_ip_on_launch = false
   availability_zone       = "eu-west-3a"
 
