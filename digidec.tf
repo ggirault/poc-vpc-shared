@@ -6,7 +6,7 @@
 resource "aws_subnet" "digidec_private" {
   vpc_id                  = module.vpc.vpc_id
   cidr_block              = local.digidec_private_subnet
-  map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
   availability_zone       = "eu-west-3a"
 
   tags = {
@@ -22,7 +22,7 @@ resource "aws_subnet" "digidec_private" {
 resource "aws_subnet" "digidec_public" {
   vpc_id                  = module.vpc.vpc_id
   cidr_block              = local.digidec_public_subnet
-  map_public_ip_on_launch = false
+  map_public_ip_on_launch = true
   availability_zone       = "eu-west-3a"
 
   tags = {
