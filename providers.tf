@@ -3,10 +3,11 @@ terraform {
 
   backend "s3" {
     encrypt = true
-    region         = "eu-west-3"
-    bucket         = "archsol-tfsates-eu-west-3"
+    region  = "eu-west-3"
+    bucket  = "archsol-tfsates-eu-west-3"
+    key     = "terraform.tfstate"
+    profile = "archsol"
     # dynamodb_table = ""
-    profile        = "archsol"
   }
 
   required_providers {
