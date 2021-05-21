@@ -32,6 +32,48 @@ resource "aws_subnet" "digidec_public" {
 
 
 #--------------------------------------------------------
+# Route table digidec subnets
+#--------------------------------------------------------
+
+resource "aws_route_table" "digidec_public" {
+  vpc_id = module.vpc.vpc_id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = module.vpc.igw_id
+  }
+
+  tags = {
+    Name = "rt-digidec-public"
+  }
+}
+
+resource "aws_route_table_association" "digidec_public" {
+  subnet_id      = aws_subnet.digidec_public.id
+  route_table_id = aws_route_table.digidec_public.id
+}
+
+resource "aws_route_table" "digidec_private" {
+  vpc_id = module.vpc.vpc_id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    nat_gateway_id = module.vpc.natgw_ids[0]
+  }
+
+  tags = {
+    Name = "rt-digidec-private"
+  }
+}
+
+resource "aws_route_table_association" "digidec_private" {
+  subnet_id      = aws_subnet.digidec_private.id
+  route_table_id = aws_route_table.digidec_private.id
+}
+
+
+
+#--------------------------------------------------------
 # NACL for digidec subnets
 #--------------------------------------------------------
 

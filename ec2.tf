@@ -1,16 +1,15 @@
 resource "aws_spot_instance_request" "public" {
-  ami                    = "ami-0b3e57ee3b63dd76b" # amazon linux 2 ami
-  spot_price             = "0.03"
-  instance_type          = "t3a.nano"
-  subnet_id              = module.vpc.public_subnets[0]
-  iam_instance_profile   = aws_iam_instance_profile.main.id
-  vpc_security_group_ids = [aws_security_group.allow_internet_icmp.id]
-  # key_name               = "cdz-eu-west-3-shrgrpemmh"
-  # volume_tags            = local.instance_tags
-
-  tags = {
-    Name = "private"
-  }
+  ami                  = "ami-0b3e57ee3b63dd76b" # amazon linux 2 ami
+  spot_price           = "0.03"
+  instance_type        = "t3a.nano"
+  subnet_id            = module.vpc.public_subnets[0]
+  iam_instance_profile = aws_iam_instance_profile.main.id
+  vpc_security_group_ids = [
+    aws_security_group.allow_internet_icmp.id,
+    aws_security_group.instances_mgmt.id,
+  ]
+  volume_tags = { Name = "private" }
+  tags        = { Name = "private" }
 }
 
 resource "aws_spot_instance_request" "private" {
@@ -19,27 +18,25 @@ resource "aws_spot_instance_request" "private" {
   instance_type        = "t3a.nano"
   subnet_id            = module.vpc.private_subnets[0]
   iam_instance_profile = aws_iam_instance_profile.main.id
-  # key_name               = "cdz-eu-west-3-shrgrpemmh"
-  # volume_tags            = local.instance_tags
-
-  tags = {
-    Name = "private"
-  }
+  vpc_security_group_ids = [
+    aws_security_group.instances_mgmt.id
+  ]
+  volume_tags = { Name = "private" }
+  tags        = { Name = "private" }
 }
 
 resource "aws_spot_instance_request" "digidec_public" {
-  ami                    = "ami-0b3e57ee3b63dd76b" # amazon linux 2 ami
-  spot_price             = "0.03"
-  instance_type          = "t3a.nano"
-  subnet_id              = aws_subnet.digidec_public.id
-  iam_instance_profile   = aws_iam_instance_profile.main.id
-  vpc_security_group_ids = [aws_security_group.allow_internet_icmp.id]
-  # key_name               = "cdz-eu-west-3-shrgrpemmh"
-  # volume_tags            = local.instance_tags
-
-  tags = {
-    Name = "digidec_public"
-  }
+  ami                  = "ami-0b3e57ee3b63dd76b" # amazon linux 2 ami
+  spot_price           = "0.03"
+  instance_type        = "t3a.nano"
+  subnet_id            = aws_subnet.digidec_public.id
+  iam_instance_profile = aws_iam_instance_profile.main.id
+  vpc_security_group_ids = [
+    aws_security_group.allow_internet_icmp.id,
+    aws_security_group.instances_mgmt.id,
+  ]
+  volume_tags = { Name = "digidec_public" }
+  tags        = { Name = "digidec_public" }
 }
 
 resource "aws_spot_instance_request" "digidec_private" {
@@ -48,12 +45,11 @@ resource "aws_spot_instance_request" "digidec_private" {
   instance_type        = "t3a.nano"
   subnet_id            = aws_subnet.digidec_private.id
   iam_instance_profile = aws_iam_instance_profile.main.id
-  # key_name               = "cdz-eu-west-3-shrgrpemmh"
-  # volume_tags            = local.instance_tags
-
-  tags = {
-    Name = "digidec_private"
-  }
+  vpc_security_group_ids = [
+    aws_security_group.instances_mgmt.id
+  ]
+  volume_tags = { Name = "digidec_private" }
+  tags        = { Name = "digidec_private" }
 }
 
 resource "aws_iam_instance_profile" "main" {
@@ -108,5 +104,39 @@ resource "aws_security_group" "allow_internet_icmp" {
 
   tags = {
     Name = "allow_icmp"
+  }
+}
+
+# Create a security group to allow ping from the Internet (Homeworking)
+resource "aws_security_group" "instances_mgmt" {
+  name        = "instances_mgmt"
+  description = "Allow ICMP inbound traffic from VPC"
+  vpc_id      = module.vpc.vpc_id
+
+  ingress {
+    description = "ICMP from VPC"
+    from_port   = -1
+    to_port     = -1
+    protocol    = "icmp"
+    cidr_blocks = [local.vpc_cidr]
+  }
+
+  ingress {
+    description = "SSH from VPC"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [local.vpc_cidr]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "instances_mgmt"
   }
 }
