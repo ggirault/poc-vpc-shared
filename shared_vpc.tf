@@ -5,29 +5,67 @@ locals {
 
   vpc_cidr          = "10.70.0.0/17"
   public_subnets    = ["10.70.1.0/24"]  # Public subnet, only a firewall should be running inside this subnet
-  private_subnets   = ["10.70.50.0/24"] # Private subnet, no public ip address
+  private_subnets   = ["10.70.50.0/24"] # Private subnet, no public ip address, default route to firewall subnet
   protected_subnets = ["10.70.20.0/24"] # Public subnet protected by the firewal. The traffic coming to and from the Internet will be redirected to the firewall instances
 
-  # digidec_public_subnet  = "10.70.164.0/24"
-  # digidec_private_subnet = "10.70.166.0/24"
-
-  # digidec_nacl_rules = {
-  #   "100"  = { protocol = -1, action = "allow", cidr_block = "10.70.164.0/23", from_port = 0, to_port = 0, }, # Allow from subnets wihtin the same project and environment
-  #   "200"  = { protocol = -1, action = "allow", cidr_block = "10.70.144.0/23", from_port = 0, to_port = 0, }, # Allow from shared public and private subnets
-  #   "500"  = { protocol = -1, action = "deny", cidr_block = "10.70.0.0/16", from_port = 0, to_port = 0, },    # Deny all other ips dedicated to the AWS cloud
-  #   "1000" = { protocol = -1, action = "allow", cidr_block = "0.0.0.0/0", from_port = 0, to_port = 0, },      # Allow traffic from the Internet
-  # }
+  network_acls = {
+    public_inbound = [
+      {
+        rule_number = 100
+        rule_action = "allow"
+        from_port   = 0
+        to_port     = 0
+        protocol    = -1
+        cidr_block  = "0.0.0.0/0"
+      },
+    ]
+    public_outbound = [
+      {
+        rule_number = 100
+        rule_action = "allow"
+        from_port   = 0
+        to_port     = 0
+        protocol    = -1
+        cidr_block  = "0.0.0.0/0"
+      },
+    ]
+    private_inbound = [
+      {
+        rule_number = 100
+        rule_action = "allow"
+        from_port   = 0
+        to_port     = 0
+        protocol    = -1
+        cidr_block  = local.public_subnets[0]
+      },
+    ]
+    private_outbound = [
+      {
+        rule_number = 100
+        rule_action = "allow"
+        from_port   = 0
+        to_port     = 0
+        protocol    = -1
+        cidr_block  = local.public_subnets[0]
+      },
+    ]
+  }
 }
 
 module "shared_vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
-  name = "my-vpc-shared"
+  name = "shared-vpc"
   cidr = local.vpc_cidr
 
-  azs             = ["eu-west-3a", "eu-west-3b"]
+  azs             = ["eu-west-3a"]
   public_subnets  = local.public_subnets
   private_subnets = local.private_subnets
+
+  public_inbound_acl_rules   = local.network_acls.public_inbound
+  public_outbound_acl_rules  = local.network_acls.public_inbound
+  private_inbound_acl_rules  = local.network_acls.private_inbound
+  private_outbound_acl_rules = local.network_acls.private_inbound
 
   enable_nat_gateway     = false
   single_nat_gateway     = true
@@ -47,7 +85,7 @@ resource "aws_subnet" "protected" {
   vpc_id                  = module.shared_vpc.vpc_id
   cidr_block              = local.protected_subnets[0]
   map_public_ip_on_launch = true
-  tags                    = { Name = "my-vpc-shared-protected" }
+  tags                    = { Name = "shared-vpc-protected" }
 }
 
 resource "aws_route_table" "protected" {
@@ -58,7 +96,7 @@ resource "aws_route_table" "protected" {
     instance_id = aws_instance.firewall.id
   }
 
-  tags = { Name = "my-vpc-shared-protected" }
+  tags = { Name = "shared-vpc-protected" }
 }
 
 resource "aws_route_table_association" "protected" {
@@ -70,6 +108,7 @@ resource "aws_route_table_association" "protected" {
 #------------------------------------------------------------------
 # Private subnet
 #------------------------------------------------------------------
+
 resource "aws_route" "prifvate_to_firewall" {
   route_table_id         = module.shared_vpc.private_route_table_ids[0]
   destination_cidr_block = "0.0.0.0/0"
@@ -78,8 +117,9 @@ resource "aws_route" "prifvate_to_firewall" {
 
 
 #------------------------------------------------------------------
-# Edge route
+# Edge route Table
 #------------------------------------------------------------------
+
 resource "aws_route_table" "igw" {
   vpc_id = module.shared_vpc.vpc_id
 
@@ -99,6 +139,10 @@ resource "aws_route_table_association" "igw" {
   route_table_id = aws_route_table.igw.id
 }
 
+
+#------------------------------------------------------------------
+# Security Group
+#------------------------------------------------------------------
 
 # Create a security group to allow ping from the Internet (Homeworking)
 resource "aws_security_group" "default" {
